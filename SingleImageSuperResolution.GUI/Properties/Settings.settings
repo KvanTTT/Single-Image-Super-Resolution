@@ -29,5 +29,14 @@
     <Setting Name="OrigIncrement" Type="System.Double" Scope="User">
       <Value Profile="(Default)">0.5</Value>
     </Setting>
+    <Setting Name="Randomize" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="InputImagesPath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">..\..\..\Samples\</Value>
+    </Setting>
+    <Setting Name="InputImageIndex" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

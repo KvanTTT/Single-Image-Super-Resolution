@@ -18,6 +18,8 @@ namespace SingleImageSuperResolution.GUI
 {
     public partial class frmMain : Form
     {
+        Stopwatch Stopwatch;
+
         public frmMain()
         {
             InitializeComponent();
@@ -32,32 +34,35 @@ namespace SingleImageSuperResolution.GUI
             tbDecIncrementRatio.Text = Settings.Default.DecIncrementRatio.ToString();
             tbReplaceDistance.Text = Settings.Default.ReplaceDistance.ToString();
             tbOrigIncrement.Text = Settings.Default.OrigIncrement.ToString();
-        }
-        private void frmMain_FormClosed(object sender, FormClosedEventArgs e)
-        {
-            Settings.Default.DecLevelsCount = (int)nudDecLevelsCount.Value;
-            Settings.Default.IncLevelsCount = (int)nudIncLevelsCount.Value;
-            Settings.Default.DecreaseRatio = double.Parse(tbDecreaseRatio.Text);
-            Settings.Default.IncreaseRatio = double.Parse(tbIncreaseRatio.Text);
-            Settings.Default.BlockSize = (int)nudBlockSize.Value;
-            Settings.Default.DecIncrementRatio = double.Parse(tbDecIncrementRatio.Text);
-            Settings.Default.OrigIncrement = double.Parse(tbOrigIncrement.Text);
-            Settings.Default.ReplaceDistance = double.Parse(tbReplaceDistance.Text);
-            Settings.Default.Save();
+            tbInputImagesPath.Text = Settings.Default.InputImagesPath;
+            tbInputImagesPath_TextChanged(null, null);
+            if (cmbInputImages.Items.Count > 0)
+                cmbInputImages.SelectedIndex = Settings.Default.InputImageIndex;
         }
 
-        private void btnOpenInputImage_Click(object sender, EventArgs e)
+        private void frmMain_FormClosed(object sender, FormClosedEventArgs e)
         {
-            ofdInput.FileName = tbInputImage.Text;
+            SaveSettings();
+        }
+
+        private void btnOpenInputImagesPath_Click(object sender, EventArgs e)
+        {
+            var dialog = new FolderBrowserDialog();
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                tbInputImagesPath.Text = dialog.SelectedPath;
+                tbInputImagesPath_TextChanged(sender, e);
+            }
         }
 
         private void btnProcess_Click(object sender, EventArgs e)
         {
-            var input = new Bitmap(tbInputImage.Text);
-            pbInput.Image = input;
+            SaveSettings();
+            var input = new Bitmap(Path.Combine(((ComboBoxItem)cmbInputImages.SelectedItem).Value.ToString()));
+            pbOutputInterpolation.Image = null;
+            pbOutputSuperResolution.Image = null;
 
-            var stopwatch = Stopwatch.StartNew();
-
+            Stopwatch = Stopwatch.StartNew();
             var superResoultion = new SuperResolution(input)
             {
                 BlockWidth = (int)nudBlockSize.Value,
@@ -73,12 +78,18 @@ namespace SingleImageSuperResolution.GUI
                 ReplaceDistance = double.Parse(tbReplaceDistance.Text),
                 BlockIncRatioX = double.Parse(tbOrigIncrement.Text),
                 BlockIncRatioY = double.Parse(tbOrigIncrement.Text),
-                Parallelization = cbParallel.Checked
+                Parallelization = cbParallel.Checked,
+                Blur = cbBlur.Checked,
+                BlurKernelSize = int.Parse(tbBlurKernelSize.Text),
+                BlurSigma = double.Parse(tbBlurSigma.Text)
             };
+            progress.Value = 0;
+            superResoultion.FragmentFounded += superResoultion_FragmentFounded;
             var output = superResoultion.Process();
+            progress.Value = progress.Maximum;
 
-            stopwatch.Stop();
-            tbTime.Text = stopwatch.Elapsed.ToString();
+            Stopwatch.Stop();
+            tbTime.Text = Stopwatch.Elapsed.ToString();
 
             pbOutputInterpolation.Image = new Bitmap(input,
                 (int)Math.Round(input.Width * superResoultion.ZoomCoef),
@@ -88,10 +99,20 @@ namespace SingleImageSuperResolution.GUI
             tbMaxDistance.Text = output.MaxDistance.ToString();
             tbAvgDistance.Text = output.AvgDistance.ToString();
 
-            var extension = Path.GetExtension(tbInputImage.Text);
-            var fileName = Path.GetFileNameWithoutExtension(tbInputImage.Text);
+            var extension = Path.GetExtension(tbInputImagesPath.Text);
+            var fileName = Path.GetFileNameWithoutExtension(tbInputImagesPath.Text);
             pbOutputInterpolation.Image.Save(fileName + " Interpolation (" + tbIncreaseRatio.Text + ").png", ImageFormat.Png);
-            pbOutputSuperResolution.Image.Save(fileName + " SR (" + tbIncreaseRatio.Text + ").png", ImageFormat.Png);
+            pbOutputSuperResolution.Image.Save(string.Format("{0} SR ({1}{2}).png", fileName, tbIncreaseRatio.Text, cbBlur.Checked ? ", Blur" : "", ImageFormat.Png));
+        }
+
+        void superResoultion_FragmentFounded(object sender, EventArgs e)
+        {
+            var args = (FragmentEventArgs)e;
+            progress.Value = (int)Math.Round(progress.Minimum +
+                ((double)args.IncLevel + (double)args.FragmentNumber / args.FragmentCount) / args.IncLevelsCount * 
+                (progress.Maximum - progress.Minimum));
+            tbTime.Text = Stopwatch.Elapsed.ToString();
+            Application.DoEvents();
         }
 
         private void btnSave_Click(object sender, EventArgs e)
@@ -139,6 +160,54 @@ namespace SingleImageSuperResolution.GUI
                 (srHorizScroll.Maximum - srHorizScroll.Minimum) * (interpHorizScroll.Maximum - interpHorizScroll.Minimum));
             interpVertScroll.Value = (int)Math.Round((double)srVertScroll.Value /
                 (srVertScroll.Maximum - srVertScroll.Minimum) * (interpVertScroll.Maximum - interpVertScroll.Minimum));
+        }
+
+        private void cbBlur_CheckedChanged(object sender, EventArgs e)
+        {
+            if (cbBlur.Checked)
+            {
+                tbBlurKernelSize.Enabled = true;
+                tbBlurSigma.Enabled = true;
+            }
+            else
+            {
+                tbBlurKernelSize.Enabled = false;
+                tbBlurSigma.Enabled = false;
+            }
+        }
+
+        private void cmbInputImages_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            pbInput.Image = new Bitmap(Path.Combine(((ComboBoxItem)cmbInputImages.SelectedItem).Value.ToString()));
+            pbOutputInterpolation.Image = null;
+            pbOutputSuperResolution.Image = null;
+        }
+
+        private void tbInputImagesPath_TextChanged(object sender, EventArgs e)
+        {
+            cmbInputImages.Items.Clear();
+            var files = Directory.EnumerateFiles(tbInputImagesPath.Text, "*.*", SearchOption.AllDirectories)
+                .Where(file => (new string[] { ".jpg", ".jpeg", ".png", ".bmp" }).Contains(Path.GetExtension(file)));
+            foreach (var file in files)
+                cmbInputImages.Items.Add(new ComboBoxItem(file, Path.GetFileName(file)));
+            cmbInputImages.SelectedIndex = 0;
+            pbOutputInterpolation.Image = null;
+            pbOutputSuperResolution.Image = null;
+        }
+
+        private void SaveSettings()
+        {
+            Settings.Default.DecLevelsCount = (int)nudDecLevelsCount.Value;
+            Settings.Default.IncLevelsCount = (int)nudIncLevelsCount.Value;
+            Settings.Default.DecreaseRatio = double.Parse(tbDecreaseRatio.Text);
+            Settings.Default.IncreaseRatio = double.Parse(tbIncreaseRatio.Text);
+            Settings.Default.BlockSize = (int)nudBlockSize.Value;
+            Settings.Default.DecIncrementRatio = double.Parse(tbDecIncrementRatio.Text);
+            Settings.Default.OrigIncrement = double.Parse(tbOrigIncrement.Text);
+            Settings.Default.ReplaceDistance = double.Parse(tbReplaceDistance.Text);
+            Settings.Default.InputImagesPath = tbInputImagesPath.Text;
+            Settings.Default.InputImageIndex = cmbInputImages.SelectedIndex;
+            Settings.Default.Save();
         }
     }
 }

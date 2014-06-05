@@ -130,5 +130,41 @@ namespace SingleImageSuperResolution.GUI.Properties {
                 this["OrigIncrement"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool Randomize {
+            get {
+                return ((bool)(this["Randomize"]));
+            }
+            set {
+                this["Randomize"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("..\\..\\..\\Samples\\")]
+        public string InputImagesPath {
+            get {
+                return ((string)(this["InputImagesPath"]));
+            }
+            set {
+                this["InputImagesPath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int InputImageIndex {
+            get {
+                return ((int)(this["InputImageIndex"]));
+            }
+            set {
+                this["InputImageIndex"] = value;
+            }
+        }
     }
 }

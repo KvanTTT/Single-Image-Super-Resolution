@@ -10,6 +10,41 @@ using System.Threading.Tasks;
 
 namespace SingleImageSuperResolution
 {
+    public class FragmentEventArgs : EventArgs
+    {
+        public int IncLevel
+        {
+            get;
+            set;
+        }
+
+        public int FragmentNumber
+        {
+            get;
+            set;
+        }
+
+        public int FragmentCount
+        {
+            get;
+            set;
+        }
+
+        public int IncLevelsCount
+        {
+            get;
+            set;
+        }
+
+        public FragmentEventArgs(int incLevel, int incLevelsCount, int fragmentNumber, int fragmentCount)
+        {
+            IncLevel = incLevel;
+            IncLevelsCount = incLevelsCount;
+            FragmentNumber = fragmentNumber;
+            FragmentCount = fragmentCount;
+        }
+    }
+
     public class SuperResolution
     {
         private Bitmap _inputImage;
@@ -98,6 +133,26 @@ namespace SingleImageSuperResolution
             set;
         }
 
+        public bool Blur
+        {
+            get;
+            set;
+        }
+
+        public int BlurKernelSize
+        {
+            get;
+            set;
+        }
+
+        public double BlurSigma
+        {
+            get;
+            set;
+        }
+
+        public event EventHandler FragmentFounded;
+
         public SuperResolution(Bitmap bitmap)
         {
             _inputImage = new Bitmap(bitmap);
@@ -106,6 +161,8 @@ namespace SingleImageSuperResolution
             BlockWidth = BlockHeight = 9;
             DecBlockWidth = DecBlockHeight = 9;
             DecBlockIncXRatio = DecBlockIncYRatio = 0;
+            BlurKernelSize = 12;
+            BlurSigma = 1.4;
         }
 
         public OutputInfo Process()
@@ -118,13 +175,13 @@ namespace SingleImageSuperResolution
             for (int i = 0; i < IncLevelsCount; i++)
             {
                 GenerateDecLevelsAndFragments(image, out origLevelImage, out decLevelImages);
-                var mapping = SearchCorrespondingFragments(origLevelImage, decLevelImages);
+                var mapping = SearchCorrespondingFragments(i, origLevelImage, decLevelImages);
                 image = ReplaceFragments(origLevelImage, decLevelImages, mapping);
 
                 double coef = 1.0 + (ZoomCoef - 1) * (i + 1) / IncLevelsCount;
                 int newWidth = (int)Math.Round(_inputImage.Width * coef);
                 int newHeight = (int)Math.Round(_inputImage.Height * coef);
-                image = Utils.ChangeSize(image, newWidth, newHeight);
+                image = Utils.ChangeSize(image, newWidth, newHeight, System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor);
 
                 var orderedByDistances = mapping.OrderBy(m => m.Distance);
                 minDist = (minDist + orderedByDistances.First().Distance) / 2;
@@ -145,7 +202,15 @@ namespace SingleImageSuperResolution
             out LevelImage origLevelImage, out LevelImage[] decLevelImages)
         {
             decLevelImages = new LevelImage[DecLevelsCount];
-            origLevelImage = new LevelImage(image);
+
+            origLevelImage = new LevelImage(image, BlurKernelSize, BlurSigma);
+            double blockIncX = BlockIncRatioX * BlockWidth;
+            if (BlockIncRatioX == 0)
+                blockIncX = 1;
+            double blockIncY = BlockIncRatioY * BlockHeight;
+            if (BlockIncRatioY == 0)
+                blockIncY = 1;
+            origLevelImage.PrepareFragments(Blur, blockIncX, blockIncY, BlockWidth, BlockHeight);
 
             double decBlockIncX = DecBlockIncXRatio * BlockWidth;
             if (DecBlockIncXRatio == 0)
@@ -154,26 +219,18 @@ namespace SingleImageSuperResolution
             if (DecBlockIncYRatio == 0)
                 decBlockIncY = 1;
 
-            double blockIncX = BlockIncRatioX * BlockWidth;
-            if (BlockIncRatioX == 0)
-                blockIncX = 1;
-            double blockIncY = BlockIncRatioY * BlockHeight;
-            if (BlockIncRatioY == 0)
-                blockIncY = 1;
-
             for (int i = 0; i < DecLevelsCount; i++)
             {
                 double coef = 1 / (Math.Pow(DecZoomCoef, (i + 1)));
-                int newWidth = (int)Math.Round(_inputImage.Width * coef);
-                int newHeight = (int)Math.Round(_inputImage.Height * coef);
-                decLevelImages[i] = new LevelImage(_inputImage, newWidth, newHeight);
-                decLevelImages[i].PrepareFragments(decBlockIncX, decBlockIncY, BlockWidth, BlockHeight);
+                int newWidth = (int)Math.Round(image.Width * coef);
+                int newHeight = (int)Math.Round(image.Height * coef);
+                image = Utils.ChangeSize(image, newWidth, newHeight);
+                decLevelImages[i] = new LevelImage(image, BlurKernelSize, BlurSigma);
+                decLevelImages[i].PrepareFragments(Blur, decBlockIncX, decBlockIncY, BlockWidth, BlockHeight);
             }
-
-            origLevelImage.PrepareFragments(blockIncX, blockIncY, BlockWidth, BlockHeight);
         }
 
-        private List<FragmentsMapping> SearchCorrespondingFragments(LevelImage origLevelImage, LevelImage[] decLevelImages)
+        private List<FragmentsMapping> SearchCorrespondingFragments(int incLevelNumber, LevelImage origLevelImage, LevelImage[] decLevelImages)
         {
             int[] fragmentLevelsIndexes;
             var fragmentsYComps = LevelFragmentPointsToArray(decLevelImages, out fragmentLevelsIndexes);
@@ -185,17 +242,17 @@ namespace SingleImageSuperResolution
             if (!Parallelization)
             {
                 for (int i = 0; i < origLevelImage.Fragments.Count; i++)
-                    KdSearch(origLevelImage.Fragments, i, mapping, fragmentLevelsIndexes);
+                    KdSearch(incLevelNumber, origLevelImage.Fragments, i, mapping, fragmentLevelsIndexes);
             }
             else
-                Parallel.For(0, origLevelImage.Fragments.Count, i => KdSearch(origLevelImage.Fragments, i, mapping, fragmentLevelsIndexes));
+                Parallel.For(0, origLevelImage.Fragments.Count, i => KdSearch(incLevelNumber, origLevelImage.Fragments, i, mapping, fragmentLevelsIndexes));
 
             AnnWrapper.AnnFree();
 
             return mapping;
         }
 
-        private void KdSearch(List<LevelImageFragment> fragments, int ind, List<FragmentsMapping> mapping, int[] fragmentLevelsIndexes)
+        private void KdSearch(int incLevelNumber, List<LevelImageFragment> fragments, int ind, List<FragmentsMapping> mapping, int[] fragmentLevelsIndexes)
         {
             var indDist = AnnWrapper.AnnKdSearch(fragments[ind].YComponents.Select(y => (double)y).ToArray());
             lock (mapping)
@@ -208,6 +265,12 @@ namespace SingleImageSuperResolution
                 };
                 fragmentMapping.DecIndex = indDist.Item1 - fragmentLevelsIndexes[fragmentMapping.LevelIndex];
                 mapping.Add(fragmentMapping);
+
+                if (ind % 100 == 0)
+                {
+                    if (FragmentFounded != null)
+                        FragmentFounded(this, new FragmentEventArgs(incLevelNumber, IncLevelsCount, ind, fragments.Count));
+                }
             }
         }
 
@@ -299,7 +362,7 @@ namespace SingleImageSuperResolution
 
                             int decReplaceCount = 0;
                             int origReplaceCount = 0;
-                            if (fragmentMapping.Distance < ReplaceDistance)
+                            if (fragmentMapping.Distance < ReplaceDistance && fragmentMapping.DecIndex < decLevelImages[fragmentMapping.LevelIndex].Fragments.Count)
                             {
                                 decImageFragmentOffset = decLevelImages[fragmentMapping.LevelIndex].Fragments[fragmentMapping.DecIndex].Offset;
                                 decReplaceCount++;
@@ -318,7 +381,7 @@ namespace SingleImageSuperResolution
                             int ind = (srcY * origImage.Width + srcX) * Utils.ColorComponentsCount;
                             r += origLevelImage.RGB[ind + Utils.RedOffset] * distances[i] * invDistVectorLength;
                             g += origLevelImage.RGB[ind + Utils.GreenOffset] * distances[i] * invDistVectorLength;
-                            b += origLevelImage.RGB[ind + Utils.BlueOffset] * distances[i] * invDistVectorLength;
+                            b += origLevelImage.RGB[ind + Utils.BlurOffset] * distances[i] * invDistVectorLength;
                         }
                     }
                     else
@@ -326,13 +389,13 @@ namespace SingleImageSuperResolution
                         int ind = (y * width + x) * Utils.ColorComponentsCount;
                         r = origLevelImage.RGB[ind + Utils.RedOffset];
                         g = origLevelImage.RGB[ind + Utils.GreenOffset];
-                        b = origLevelImage.RGB[ind + Utils.BlueOffset];
+                        b = origLevelImage.RGB[ind + Utils.BlurOffset];
                     }
 
                     int resultInd = (y * width + x) * Utils.ColorComponentsCount;
                     resultRGB[resultInd + Utils.RedOffset] = (byte)Math.Round(r);
                     resultRGB[resultInd + Utils.GreenOffset] = (byte)Math.Round(g);
-                    resultRGB[resultInd + Utils.BlueOffset] = (byte)Math.Round(b);
+                    resultRGB[resultInd + Utils.BlurOffset] = (byte)Math.Round(b);
                     resultRGB[resultInd + Utils.AlphaOffset] = 255;
                 }
             }
@@ -351,6 +414,8 @@ namespace SingleImageSuperResolution
             {
                 fragmentLevelsIndexes[i] = ind;
                 var yComps = levelImages[i].FragmentYCompsToDoubleArray();
+                if (yComps.Length == 0)
+                    continue;
                 result.AddRange(yComps);
                 ind += yComps.Length / (levelImages[i].Fragments[0].YComponents.Length);
             }

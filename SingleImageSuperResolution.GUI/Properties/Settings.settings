@@ -17,14 +17,17 @@
     <Setting Name="BlockSize" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">5</Value>
     </Setting>
-    <Setting Name="DecIncrement" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">1</Value>
+    <Setting Name="DecIncrementRatio" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0</Value>
     </Setting>
     <Setting Name="Parallel" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="ReplaceDistance" Type="System.Double" Scope="User">
       <Value Profile="(Default)">9999</Value>
+    </Setting>
+    <Setting Name="OrigIncrement" Type="System.Double" Scope="User">
+      <Value Profile="(Default)">0.5</Value>
     </Setting>
   </Settings>
 </SettingsFile>

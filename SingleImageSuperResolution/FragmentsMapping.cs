@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SingleImageSuperResolution
 {
-    public struct FragmentsMapping
+    public class FragmentsMapping
     {
         public int LevelIndex;
         public int OrigIndex;

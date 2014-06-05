@@ -57,11 +57,19 @@
             this.cbParallel = new System.Windows.Forms.CheckBox();
             this.tbIncreaseRatio = new System.Windows.Forms.TextBox();
             this.label10 = new System.Windows.Forms.Label();
-            this.nudDecIncrement = new System.Windows.Forms.NumericUpDown();
             this.label6 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.label12 = new System.Windows.Forms.Label();
             this.tbReplaceDistance = new System.Windows.Forms.TextBox();
+            this.label12 = new System.Windows.Forms.Label();
+            this.label13 = new System.Windows.Forms.Label();
+            this.label14 = new System.Windows.Forms.Label();
+            this.label15 = new System.Windows.Forms.Label();
+            this.tbMinDistance = new System.Windows.Forms.TextBox();
+            this.tbMaxDistance = new System.Windows.Forms.TextBox();
+            this.tbAvgDistance = new System.Windows.Forms.TextBox();
+            this.tbDecIncrementRatio = new System.Windows.Forms.TextBox();
+            this.tbOrigIncrement = new System.Windows.Forms.TextBox();
+            this.label16 = new System.Windows.Forms.Label();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbInput)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -75,7 +83,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.nudBlockSize)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudDecLevelsCount)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudIncLevelsCount)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudDecIncrement)).BeginInit();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -249,7 +256,7 @@
             // 
             // btnOpenInputImage
             // 
-            this.btnOpenInputImage.Location = new System.Drawing.Point(197, 295);
+            this.btnOpenInputImage.Location = new System.Drawing.Point(197, 302);
             this.btnOpenInputImage.Name = "btnOpenInputImage";
             this.btnOpenInputImage.Size = new System.Drawing.Size(25, 20);
             this.btnOpenInputImage.TabIndex = 32;
@@ -267,7 +274,7 @@
             // 
             // tbInputImage
             // 
-            this.tbInputImage.Location = new System.Drawing.Point(25, 295);
+            this.tbInputImage.Location = new System.Drawing.Point(25, 302);
             this.tbInputImage.Name = "tbInputImage";
             this.tbInputImage.Size = new System.Drawing.Size(166, 20);
             this.tbInputImage.TabIndex = 33;
@@ -284,7 +291,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(22, 279);
+            this.label4.Location = new System.Drawing.Point(22, 286);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(88, 13);
             this.label4.TabIndex = 34;
@@ -344,7 +351,7 @@
             // cbParallel
             // 
             this.cbParallel.AutoSize = true;
-            this.cbParallel.Location = new System.Drawing.Point(25, 246);
+            this.cbParallel.Location = new System.Drawing.Point(25, 257);
             this.cbParallel.Name = "cbParallel";
             this.cbParallel.Size = new System.Drawing.Size(60, 17);
             this.cbParallel.TabIndex = 37;
@@ -368,33 +375,23 @@
             this.label10.TabIndex = 38;
             this.label10.Text = "Increase Ratio";
             // 
-            // nudDecIncrement
-            // 
-            this.nudDecIncrement.Location = new System.Drawing.Point(122, 156);
-            this.nudDecIncrement.Name = "nudDecIncrement";
-            this.nudDecIncrement.Size = new System.Drawing.Size(100, 20);
-            this.nudDecIncrement.TabIndex = 41;
-            this.nudDecIncrement.Value = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            // 
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(22, 158);
+            this.label6.Location = new System.Drawing.Point(22, 185);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(77, 13);
+            this.label6.Size = new System.Drawing.Size(73, 13);
             this.label6.TabIndex = 40;
-            this.label6.Text = "Dec Increment";
+            this.label6.Text = "Dec Inc Ratio";
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.tbOrigIncrement);
+            this.groupBox1.Controls.Add(this.label16);
+            this.groupBox1.Controls.Add(this.tbDecIncrementRatio);
             this.groupBox1.Controls.Add(this.tbReplaceDistance);
             this.groupBox1.Controls.Add(this.label12);
             this.groupBox1.Controls.Add(this.label6);
-            this.groupBox1.Controls.Add(this.nudDecIncrement);
             this.groupBox1.Controls.Add(this.label10);
             this.groupBox1.Controls.Add(this.tbIncreaseRatio);
             this.groupBox1.Controls.Add(this.cbParallel);
@@ -411,33 +408,115 @@
             this.groupBox1.Controls.Add(this.nudBlockSize);
             this.groupBox1.Location = new System.Drawing.Point(12, 12);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(268, 371);
+            this.groupBox1.Size = new System.Drawing.Size(268, 373);
             this.groupBox1.TabIndex = 24;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Settings";
             // 
+            // tbReplaceDistance
+            // 
+            this.tbReplaceDistance.Location = new System.Drawing.Point(122, 208);
+            this.tbReplaceDistance.Name = "tbReplaceDistance";
+            this.tbReplaceDistance.Size = new System.Drawing.Size(100, 20);
+            this.tbReplaceDistance.TabIndex = 43;
+            this.tbReplaceDistance.Text = "9999";
+            // 
             // label12
             // 
             this.label12.AutoSize = true;
-            this.label12.Location = new System.Drawing.Point(22, 184);
+            this.label12.Location = new System.Drawing.Point(22, 211);
             this.label12.Name = "label12";
             this.label12.Size = new System.Drawing.Size(92, 13);
             this.label12.TabIndex = 42;
             this.label12.Text = "Replace Distance";
             // 
-            // tbReplaceDistance
+            // label13
             // 
-            this.tbReplaceDistance.Location = new System.Drawing.Point(122, 181);
-            this.tbReplaceDistance.Name = "tbReplaceDistance";
-            this.tbReplaceDistance.Size = new System.Drawing.Size(100, 20);
-            this.tbReplaceDistance.TabIndex = 43;
-            this.tbReplaceDistance.Text = "9999";
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(684, 142);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(69, 13);
+            this.label13.TabIndex = 25;
+            this.label13.Text = "Min Distance";
+            // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.Location = new System.Drawing.Point(684, 166);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(72, 13);
+            this.label14.TabIndex = 26;
+            this.label14.Text = "Max Distance";
+            // 
+            // label15
+            // 
+            this.label15.AutoSize = true;
+            this.label15.Location = new System.Drawing.Point(685, 190);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(71, 13);
+            this.label15.TabIndex = 27;
+            this.label15.Text = "Avg Distance";
+            // 
+            // tbMinDistance
+            // 
+            this.tbMinDistance.Location = new System.Drawing.Point(762, 137);
+            this.tbMinDistance.Name = "tbMinDistance";
+            this.tbMinDistance.ReadOnly = true;
+            this.tbMinDistance.Size = new System.Drawing.Size(61, 20);
+            this.tbMinDistance.TabIndex = 28;
+            // 
+            // tbMaxDistance
+            // 
+            this.tbMaxDistance.Location = new System.Drawing.Point(762, 161);
+            this.tbMaxDistance.Name = "tbMaxDistance";
+            this.tbMaxDistance.ReadOnly = true;
+            this.tbMaxDistance.Size = new System.Drawing.Size(61, 20);
+            this.tbMaxDistance.TabIndex = 29;
+            // 
+            // tbAvgDistance
+            // 
+            this.tbAvgDistance.Location = new System.Drawing.Point(762, 187);
+            this.tbAvgDistance.Name = "tbAvgDistance";
+            this.tbAvgDistance.ReadOnly = true;
+            this.tbAvgDistance.Size = new System.Drawing.Size(61, 20);
+            this.tbAvgDistance.TabIndex = 30;
+            // 
+            // tbDecIncrement
+            // 
+            this.tbDecIncrementRatio.Location = new System.Drawing.Point(122, 182);
+            this.tbDecIncrementRatio.Name = "tbDecIncrement";
+            this.tbDecIncrementRatio.Size = new System.Drawing.Size(100, 20);
+            this.tbDecIncrementRatio.TabIndex = 44;
+            this.tbDecIncrementRatio.Text = "0";
+            // 
+            // tbOrigIncrement
+            // 
+            this.tbOrigIncrement.Location = new System.Drawing.Point(122, 156);
+            this.tbOrigIncrement.Name = "tbOrigIncrement";
+            this.tbOrigIncrement.Size = new System.Drawing.Size(100, 20);
+            this.tbOrigIncrement.TabIndex = 46;
+            this.tbOrigIncrement.Text = "0.5";
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(22, 159);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(72, 13);
+            this.label16.TabIndex = 45;
+            this.label16.Text = "Orig Inc Ratio";
             // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1067, 625);
+            this.Controls.Add(this.tbAvgDistance);
+            this.Controls.Add(this.tbMaxDistance);
+            this.Controls.Add(this.tbMinDistance);
+            this.Controls.Add(this.label15);
+            this.Controls.Add(this.label14);
+            this.Controls.Add(this.label13);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.label9);
@@ -467,7 +546,6 @@
             ((System.ComponentModel.ISupportInitialize)(this.nudBlockSize)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudDecLevelsCount)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudIncLevelsCount)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudDecIncrement)).EndInit();
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
@@ -506,11 +584,19 @@
         private System.Windows.Forms.CheckBox cbParallel;
         private System.Windows.Forms.TextBox tbIncreaseRatio;
         private System.Windows.Forms.Label label10;
-        private System.Windows.Forms.NumericUpDown nudDecIncrement;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.TextBox tbReplaceDistance;
+        private System.Windows.Forms.Label label13;
+        private System.Windows.Forms.Label label14;
+        private System.Windows.Forms.Label label15;
+        private System.Windows.Forms.TextBox tbMinDistance;
+        private System.Windows.Forms.TextBox tbMaxDistance;
+        private System.Windows.Forms.TextBox tbAvgDistance;
+        private System.Windows.Forms.TextBox tbDecIncrementRatio;
+        private System.Windows.Forms.TextBox tbOrigIncrement;
+        private System.Windows.Forms.Label label16;
     }
 }
 

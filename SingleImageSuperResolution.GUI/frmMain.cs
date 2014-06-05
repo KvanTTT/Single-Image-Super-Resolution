@@ -29,8 +29,9 @@ namespace SingleImageSuperResolution.GUI
             tbDecreaseRatio.Text = Settings.Default.DecreaseRatio.ToString();
             tbIncreaseRatio.Text = Settings.Default.IncreaseRatio.ToString();
             nudBlockSize.Value = Settings.Default.BlockSize;
-            nudDecIncrement.Value = Settings.Default.DecIncrement;
+            tbDecIncrementRatio.Text = Settings.Default.DecIncrementRatio.ToString();
             tbReplaceDistance.Text = Settings.Default.ReplaceDistance.ToString();
+            tbOrigIncrement.Text = Settings.Default.OrigIncrement.ToString();
         }
         private void frmMain_FormClosed(object sender, FormClosedEventArgs e)
         {
@@ -39,8 +40,10 @@ namespace SingleImageSuperResolution.GUI
             Settings.Default.DecreaseRatio = double.Parse(tbDecreaseRatio.Text);
             Settings.Default.IncreaseRatio = double.Parse(tbIncreaseRatio.Text);
             Settings.Default.BlockSize = (int)nudBlockSize.Value;
-            Settings.Default.DecIncrement = (int)nudDecIncrement.Value;
+            Settings.Default.DecIncrementRatio = double.Parse(tbDecIncrementRatio.Text);
+            Settings.Default.OrigIncrement = double.Parse(tbOrigIncrement.Text);
             Settings.Default.ReplaceDistance = double.Parse(tbReplaceDistance.Text);
+            Settings.Default.Save();
         }
 
         private void btnOpenInputImage_Click(object sender, EventArgs e)
@@ -65,12 +68,14 @@ namespace SingleImageSuperResolution.GUI
                 DecBlockHeight = (int)nudBlockSize.Value,
                 IncLevelsCount = (int)nudIncLevelsCount.Value,
                 ZoomCoef = double.Parse(tbIncreaseRatio.Text),
-                DecBlockIncX = (int)nudDecIncrement.Value,
-                DecBlockIncY = (int)nudDecIncrement.Value,
+                DecBlockIncXRatio = double.Parse(tbDecIncrementRatio.Text),
+                DecBlockIncYRatio = double.Parse(tbDecIncrementRatio.Text),
                 ReplaceDistance = double.Parse(tbReplaceDistance.Text),
+                BlockIncRatioX = double.Parse(tbOrigIncrement.Text),
+                BlockIncRatioY = double.Parse(tbOrigIncrement.Text),
                 Parallelization = cbParallel.Checked
             };
-            var restored = superResoultion.Process();
+            var output = superResoultion.Process();
 
             stopwatch.Stop();
             tbTime.Text = stopwatch.Elapsed.ToString();
@@ -78,7 +83,10 @@ namespace SingleImageSuperResolution.GUI
             pbOutputInterpolation.Image = new Bitmap(input,
                 (int)Math.Round(input.Width * superResoultion.ZoomCoef),
                 (int)Math.Round(input.Height * superResoultion.ZoomCoef));
-            pbOutputSuperResolution.Image = restored;
+            pbOutputSuperResolution.Image = output.Image;
+            tbMinDistance.Text = output.MinDistance.ToString();
+            tbMaxDistance.Text = output.MaxDistance.ToString();
+            tbAvgDistance.Text = output.AvgDistance.ToString();
 
             var extension = Path.GetExtension(tbInputImage.Text);
             var fileName = Path.GetFileNameWithoutExtension(tbInputImage.Text);
@@ -132,7 +140,5 @@ namespace SingleImageSuperResolution.GUI
             interpVertScroll.Value = (int)Math.Round((double)srVertScroll.Value /
                 (srVertScroll.Maximum - srVertScroll.Minimum) * (interpVertScroll.Maximum - interpVertScroll.Minimum));
         }
-
-        
     }
 }

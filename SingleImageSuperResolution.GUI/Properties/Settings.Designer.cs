@@ -85,13 +85,13 @@ namespace SingleImageSuperResolution.GUI.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
-        public int DecIncrement {
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double DecIncrementRatio {
             get {
-                return ((int)(this["DecIncrement"]));
+                return ((double)(this["DecIncrementRatio"]));
             }
             set {
-                this["DecIncrement"] = value;
+                this["DecIncrementRatio"] = value;
             }
         }
         
@@ -116,6 +116,18 @@ namespace SingleImageSuperResolution.GUI.Properties {
             }
             set {
                 this["ReplaceDistance"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public double OrigIncrement {
+            get {
+                return ((double)(this["OrigIncrement"]));
+            }
+            set {
+                this["OrigIncrement"] = value;
             }
         }
     }

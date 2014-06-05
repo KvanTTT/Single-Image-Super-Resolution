@@ -15,7 +15,7 @@ namespace SingleImageSuperResolution
             set;
         }
 
-        public byte[] Pixels
+        public byte[] RGB
         {
             get;
             set;
@@ -33,24 +33,26 @@ namespace SingleImageSuperResolution
             set;
         }
         public LevelImage(Bitmap bitmap, int newWidht, int newHeight)
-            : this(new Bitmap(bitmap, newWidht, newHeight))
+            : this(Utils.ChangeSize(bitmap, newWidht, newHeight))
         {
         }
 
         public LevelImage(Bitmap bitmap)
         {
             Image = bitmap;
-            Pixels = Utils.BitmapToBytesArray(bitmap);
-            YComps = Utils.ARGBtoY(Pixels);
+            RGB = Utils.BitmapToBytesArray(bitmap);
+            YComps = Utils.ARGBtoY(RGB);
         }
 
-        public void PrepareFragments(int incX = 1, int incY = 1, int blockWidth = 9, int blockHeight = 9)
+        public void PrepareFragments(double incX = 1, double incY = 1, int blockWidth = 9, int blockHeight = 9)
         {
+            var xStepsCount = (int)((Image.Width - blockWidth) / incX);
+            var yStepsCount = (int)((Image.Height - blockHeight) / incY);
             Fragments = new List<LevelImageFragment>();
-            for (int j = 0; j < Image.Height - blockHeight; j += incY)
-                for (int i = 0; i < Image.Width - blockWidth; i += incX)
+            for (int j = 0; j < yStepsCount; j++)
+                for (int i = 0; i < xStepsCount; i++)
                 {
-                    Fragments.Add(new LevelImageFragment(YComps, Image.Width, Image.Height, i, j, blockWidth, blockHeight));
+                    Fragments.Add(new LevelImageFragment(RGB, YComps, Image.Width, Image.Height, i * incX, j * incY, blockWidth, blockHeight));
                 }
         }
 

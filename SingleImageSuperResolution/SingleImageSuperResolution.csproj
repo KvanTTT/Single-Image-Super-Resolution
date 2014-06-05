@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SingleImageSuperResolution</RootNamespace>
     <AssemblyName>SingleImageSuperResolution</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -43,6 +44,7 @@
     <Compile Include="FragmentsMapping.cs" />
     <Compile Include="LevelImageFragment.cs" />
     <Compile Include="LevelImage.cs" />
+    <Compile Include="OutputInfo.cs" />
     <Compile Include="PointD.cs" />
     <Compile Include="SuperResolution.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -49,6 +49,9 @@ namespace AnnWrapperNET
         [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl, EntryPoint = "annkFRSearch")]
         private static extern void AnnkFRSearch(double* q, double squareRadius, int k, int* nnIdx, double* dd, double eps = 0.0);
 
+        [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl, EntryPoint = "annKdQuerySearch")]
+        private static extern void AnnKdQuerySearch(double* q, int n, int dim, int* nnIdx, double* dd, double eps = 0.0);
+
         #endregion
 
         public static void InitKdTree(double[][] points, int bucketSize = 1, ANNSplitRule splitRule = ANNSplitRule.ANN_KD_SUGGEST)
@@ -74,6 +77,20 @@ namespace AnnWrapperNET
             var distances = new double[1];
             AnnKdSearch(point, 1, out indexes, out distances, eps);
             return new Tuple<int, double>(indexes[0], Math.Sqrt(distances[0]));
+        }
+
+        public static List<Tuple<int, double>> AnnKdSearch(double[] points, int n, int dim, double eps = 0.0)
+        {
+            var indexes = new int[n];
+            var distances = new double[n];
+            fixed (double* p = points)
+                fixed (int* ind = indexes)
+                    fixed (double* d = distances)
+                        AnnKdQuerySearch(p, n, dim, ind, d, eps);
+            var result = new List<Tuple<int, double>>(n);
+            for (int i = 0; i < n; i++)
+                result.Add(new Tuple<int, double>(indexes[i], Math.Sqrt(distances[i])));
+            return result;
         }
 
         public static void AnnKdSearch(double[] point, int nearNeighbourCount, out int[] indexes, out double[] distances, double eps = 0.0)
@@ -105,6 +122,8 @@ namespace AnnWrapperNET
                     fixed (double* d = distances)
                         AnnkFRSearch(p, squareRadius, nearNeighbourCount, ind, d, eps);
         }
+
+        
 
         [DllImport(DllPath, CallingConvention = CallingConvention.Cdecl, EntryPoint = "annFree")]
         public static extern void AnnFree();

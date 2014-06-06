@@ -9,20 +9,37 @@ namespace SingleImageSuperResolution
 {
     public class LevelImageFragment
     {
-        public PointD Offset;
-        public byte[] YComponents;
+        public PointD Offset
+        {
+            get;
+            set;
+        }
+
+        public int Width
+        {
+            get;
+            set;
+        }
+
+        public int Height
+        {
+            get;
+            set;
+        }
+
+        public int Size
+        {
+            get
+            {
+                return Width * Height;
+            }
+        }
 
         public LevelImageFragment(byte[] rgb, byte[] yComponents, int imageWidth, int imageHeight, double xOffset, double yOffset, int width, int height)
         {
             Offset = new PointD(xOffset / imageWidth, yOffset / imageHeight);
-            YComponents = new byte[width * height];
-            for (int i = 0; i < height; i++)
-                for (int j = 0; j < width; j++)
-                {
-                    int srcInd = (int)Math.Round((int)Math.Round(yOffset + i) * imageWidth + (xOffset + j));
-                    int dstInd = i * width + j;
-                    YComponents[dstInd] = yComponents[srcInd];
-                }
+            Width = width;
+            Height = height;
         }
     }
 }

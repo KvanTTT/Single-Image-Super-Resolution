@@ -35,6 +35,7 @@ namespace SingleImageSuperResolution.GUI
             tbReplaceDistance.Text = Settings.Default.ReplaceDistance.ToString();
             tbOrigIncrement.Text = Settings.Default.OrigIncrement.ToString();
             tbInputImagesPath.Text = Settings.Default.InputImagesPath;
+            cbParallel.Checked = Settings.Default.Parallel;
             tbInputImagesPath_TextChanged(null, null);
             if (cmbInputImages.Items.Count > 0)
                 cmbInputImages.SelectedIndex = Settings.Default.InputImageIndex;
@@ -91,16 +92,17 @@ namespace SingleImageSuperResolution.GUI
             Stopwatch.Stop();
             tbTime.Text = Stopwatch.Elapsed.ToString();
 
-            pbOutputInterpolation.Image = new Bitmap(input,
+            /*pbOutputInterpolation.Image = new Bitmap(input,
                 (int)Math.Round(input.Width * superResoultion.ZoomCoef),
-                (int)Math.Round(input.Height * superResoultion.ZoomCoef));
+                (int)Math.Round(input.Height * superResoultion.ZoomCoef));*/
+            pbOutputInterpolation.Image = Utils.ChangeSize(input, (int)Math.Round(input.Width * superResoultion.ZoomCoef), (int)Math.Round(input.Height * superResoultion.ZoomCoef));
             pbOutputSuperResolution.Image = output.Image;
             tbMinDistance.Text = output.MinDistance.ToString();
             tbMaxDistance.Text = output.MaxDistance.ToString();
             tbAvgDistance.Text = output.AvgDistance.ToString();
 
-            var extension = Path.GetExtension(tbInputImagesPath.Text);
-            var fileName = Path.GetFileNameWithoutExtension(tbInputImagesPath.Text);
+            var extension = Path.GetExtension(cmbInputImages.SelectedItem.ToString());
+            var fileName = cmbInputImages.SelectedItem.ToString();
             pbOutputInterpolation.Image.Save(fileName + " Interpolation (" + tbIncreaseRatio.Text + ").png", ImageFormat.Png);
             pbOutputSuperResolution.Image.Save(string.Format("{0} SR ({1}{2}).png", fileName, tbIncreaseRatio.Text, cbBlur.Checked ? ", Blur" : "", ImageFormat.Png));
         }
@@ -207,6 +209,7 @@ namespace SingleImageSuperResolution.GUI
             Settings.Default.ReplaceDistance = double.Parse(tbReplaceDistance.Text);
             Settings.Default.InputImagesPath = tbInputImagesPath.Text;
             Settings.Default.InputImageIndex = cmbInputImages.SelectedIndex;
+            Settings.Default.Parallel = cbParallel.Checked;
             Settings.Default.Save();
         }
     }

@@ -21,13 +21,7 @@ namespace SingleImageSuperResolution
             set;
         }
 
-        public byte[] YComps
-        {
-            get;
-            set;
-        }
-
-        public byte[] YBlurComps
+        public byte[] Components
         {
             get;
             set;
@@ -38,17 +32,19 @@ namespace SingleImageSuperResolution
             get;
             set;
         }
-        public LevelImage(Bitmap bitmap, int newWidht, int newHeight, int blurKernelSize, double blurSigma)
-            : this(Utils.ChangeSize(bitmap, newWidht, newHeight), blurKernelSize, blurSigma)
+
+        public LevelImage(Bitmap bitmap, int newWidht, int newHeight, bool blur, int blurKernelSize, double blurSigma)
+            : this(Utils.ChangeSize(bitmap, newWidht, newHeight), blur, blurKernelSize, blurSigma)
         {
         }
 
-        public LevelImage(Bitmap bitmap, int blurKernelSize, double blurSigma)
+        public LevelImage(Bitmap bitmap, bool blur, int blurKernelSize, double blurSigma)
         {
             Image = bitmap;
             RGB = Utils.BitmapToBytesArray(bitmap);
-            YComps = Utils.ARGBtoY(RGB);
-            YBlurComps = Utils.GaussianBlur(YComps, bitmap.Width, bitmap.Height, blurKernelSize, blurSigma);
+            Components = Utils.ARGBtoY(RGB);
+            if (blur)
+                Components = Utils.GaussianBlur(Components, Image.Width, Image.Height, blurKernelSize, blurSigma);
         }
 
         public void PrepareFragments(bool blur = false, double incX = 1, double incY = 1, int blockWidth = 9, int blockHeight = 9)
@@ -58,23 +54,40 @@ namespace SingleImageSuperResolution
             Fragments = new List<LevelImageFragment>();
             for (int j = 0; j < yStepsCount; j++)
                 for (int i = 0; i < xStepsCount; i++)
-                {
-                    Fragments.Add(new LevelImageFragment(RGB, blur ? YBlurComps : YComps, Image.Width, Image.Height, i * incX, j * incY, blockWidth, blockHeight));
-                }
+                    Fragments.Add(new LevelImageFragment(RGB, Components, Image.Width, Image.Height, i * incX, j * incY, blockWidth, blockHeight));
+        }
+
+        public double[] FragmentYCompsToDoubleArray(int ind)
+        {
+            return FragmentYCompsToDoubleArray(ind, ind + 1);
         }
 
         public double[] FragmentYCompsToDoubleArray()
         {
+            return FragmentYCompsToDoubleArray(0, Fragments.Count);
+        }
+
+        public double[] FragmentYCompsToDoubleArray(int startInd, int endInd)
+        {
             if (Fragments.Count == 0)
                 return new double[0];
 
-            var result = new double[Fragments.Count * Fragments[0].YComponents.Length];
-            for (int i = 0; i < Fragments.Count; i++)
+            var result = new double[(endInd - startInd) * Fragments[0].Size];
+            int dstInd = 0;
+            int fragmentWidth = Fragments[0].Width;
+            int fragmentHeight = Fragments[0].Height;
+            for (int i = startInd; i < endInd; i++)
             {
-                var yComponents = Fragments[i].YComponents;
-                for (int j = 0; j < yComponents.Length; j++)
-                    result[i * yComponents.Length + j] = yComponents[j];
+                var fragment = Fragments[i];
+                var offset = fragment.Offset;
+                for (int j = 0; j < fragmentHeight; j++)
+                {
+                    int y = (int)Math.Round(offset.Y * Image.Height + j) * Image.Width;
+                    for (int k = 0; k < fragmentWidth; k++)
+                        result[dstInd++] = Components[(int)Math.Round(y + (offset.X * Image.Width + k))];
+                }
             }
+
             return result;
         }
     }

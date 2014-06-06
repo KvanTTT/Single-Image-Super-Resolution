@@ -16,7 +16,24 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnnWrapper.NET", "AnnWrappe
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{7DCA7F2A-4649-4C17-ABD8-0AAA32B44983}"
 	ProjectSection(SolutionItems) = preProject
-		Samples\Fractal Temple.jpg = Samples\Fractal Temple.jpg
+		Samples\Batterfly.png = Samples\Batterfly.png
+		Samples\Birds.png = Samples\Birds.png
+		Samples\Building and boat.png = Samples\Building and boat.png
+		Samples\Child.png = Samples\Child.png
+		Samples\Chip.png = Samples\Chip.png
+		Samples\Dragonfly.png = Samples\Dragonfly.png
+		Samples\Fractal temple.png = Samples\Fractal temple.png
+		Samples\Girl face.png = Samples\Girl face.png
+		Samples\Hall with chairs.png = Samples\Hall with chairs.png
+		Samples\Interior.png = Samples\Interior.png
+		Samples\Kangaroos.png = Samples\Kangaroos.png
+		Samples\Old man.png = Samples\Old man.png
+		Samples\Owl.png = Samples\Owl.png
+		Samples\Sculpture.png = Samples\Sculpture.png
+		Samples\Small circles in big one.png = Samples\Small circles in big one.png
+		Samples\Sunflowers.png = Samples\Sunflowers.png
+		Samples\Text.png = Samples\Text.png
+		Samples\Zebras.png = Samples\Zebras.png
 	EndProjectSection
 EndProject
 Global

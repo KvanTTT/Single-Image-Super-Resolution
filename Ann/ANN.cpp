@@ -226,6 +226,12 @@ void annkFRSearch(ANNpoint q, ANNdist sqRad, int k, ANNidxArray nnIdx, ANNdistAr
 	globalKdTree->annkFRSearch(q, sqRad, k, nnIdx, dd, eps);
 }
 
+void annKdQuerySearch(double *query, int n, int dim, ANNidxArray nnIdx, ANNdistArray dd, double eps)
+{
+	for (int i = 0; i < n; i++)
+		globalKdTree->annkSearch(query + i * dim, 1, nnIdx + i, dd + i, eps);
+}
+
 void annFree()
 {
 	delete globalKdTree;

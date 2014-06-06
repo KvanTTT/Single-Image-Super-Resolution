@@ -181,7 +181,7 @@ namespace SingleImageSuperResolution
                 double coef = 1.0 + (ZoomCoef - 1) * (i + 1) / IncLevelsCount;
                 int newWidth = (int)Math.Round(_inputImage.Width * coef);
                 int newHeight = (int)Math.Round(_inputImage.Height * coef);
-                image = Utils.ChangeSize(image, newWidth, newHeight, System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor);
+                image = Utils.ChangeSize(image, newWidth, newHeight);
 
                 var orderedByDistances = mapping.OrderBy(m => m.Distance);
                 minDist = (minDist + orderedByDistances.First().Distance) / 2;
@@ -203,20 +203,20 @@ namespace SingleImageSuperResolution
         {
             decLevelImages = new LevelImage[DecLevelsCount];
 
-            origLevelImage = new LevelImage(image, BlurKernelSize, BlurSigma);
+            origLevelImage = new LevelImage(image, Blur, BlurKernelSize, BlurSigma);
             double blockIncX = BlockIncRatioX * BlockWidth;
-            if (BlockIncRatioX == 0)
+            if (blockIncX < 1)
                 blockIncX = 1;
             double blockIncY = BlockIncRatioY * BlockHeight;
-            if (BlockIncRatioY == 0)
+            if (blockIncY < 1)
                 blockIncY = 1;
             origLevelImage.PrepareFragments(Blur, blockIncX, blockIncY, BlockWidth, BlockHeight);
 
             double decBlockIncX = DecBlockIncXRatio * BlockWidth;
-            if (DecBlockIncXRatio == 0)
+            if (decBlockIncX < 1)
                 decBlockIncX = 1;
             double decBlockIncY = DecBlockIncYRatio * BlockHeight;
-            if (DecBlockIncYRatio == 0)
+            if (decBlockIncY < 1)
                 decBlockIncY = 1;
 
             for (int i = 0; i < DecLevelsCount; i++)
@@ -225,7 +225,7 @@ namespace SingleImageSuperResolution
                 int newWidth = (int)Math.Round(image.Width * coef);
                 int newHeight = (int)Math.Round(image.Height * coef);
                 image = Utils.ChangeSize(image, newWidth, newHeight);
-                decLevelImages[i] = new LevelImage(image, BlurKernelSize, BlurSigma);
+                decLevelImages[i] = new LevelImage(image, Blur, BlurKernelSize, BlurSigma);
                 decLevelImages[i].PrepareFragments(Blur, decBlockIncX, decBlockIncY, BlockWidth, BlockHeight);
             }
         }
@@ -239,165 +239,58 @@ namespace SingleImageSuperResolution
                 BlockWidth * BlockHeight);
 
             var mapping = new List<FragmentsMapping>();
-            if (!Parallelization)
+
+            int pointsCount = 1000;
+            int queryCount = (origLevelImage.Fragments.Count + pointsCount - 1) / pointsCount;
+            for (int i = 0; i < queryCount; i++)
             {
-                for (int i = 0; i < origLevelImage.Fragments.Count; i++)
-                    KdSearch(incLevelNumber, origLevelImage.Fragments, i, mapping, fragmentLevelsIndexes);
+                KdSearch(incLevelNumber, origLevelImage,
+                    i * pointsCount, Math.Min((i + 1) * pointsCount, origLevelImage.Fragments.Count),
+                    mapping, fragmentLevelsIndexes);
             }
-            else
-                Parallel.For(0, origLevelImage.Fragments.Count, i => KdSearch(incLevelNumber, origLevelImage.Fragments, i, mapping, fragmentLevelsIndexes));
 
             AnnWrapper.AnnFree();
 
             return mapping;
         }
 
-        private void KdSearch(int incLevelNumber, List<LevelImageFragment> fragments, int ind, List<FragmentsMapping> mapping, int[] fragmentLevelsIndexes)
+        private void KdSearch(int incLevelNumber, LevelImage levelImage, int startInd, int endInd, List<FragmentsMapping> mapping, int[] fragmentLevelsIndexes)
         {
-            var indDist = AnnWrapper.AnnKdSearch(fragments[ind].YComponents.Select(y => (double)y).ToArray());
-            lock (mapping)
+            var fragments = levelImage.Fragments;
+            var indsDists = AnnWrapper.AnnKdSearch(levelImage.FragmentYCompsToDoubleArray(startInd, endInd), (endInd - startInd), levelImage.Fragments[0].Size);
+
+            for (int i = 0; i < indsDists.Count; i++)
             {
                 var fragmentMapping = new FragmentsMapping
                 {
-                    LevelIndex = FindLevelIndex(indDist.Item1, fragmentLevelsIndexes),
-                    OrigIndex = ind,
-                    Distance = indDist.Item2
+                    LevelIndex = FindLevelIndex(indsDists[i].Item1, fragmentLevelsIndexes),
+                    OrigIndex = startInd + i,
+                    Distance = indsDists[i].Item2
                 };
-                fragmentMapping.DecIndex = indDist.Item1 - fragmentLevelsIndexes[fragmentMapping.LevelIndex];
+                fragmentMapping.DecIndex = indsDists[i].Item1 - fragmentLevelsIndexes[fragmentMapping.LevelIndex];
                 mapping.Add(fragmentMapping);
-
-                if (ind % 100 == 0)
-                {
-                    if (FragmentFounded != null)
-                        FragmentFounded(this, new FragmentEventArgs(incLevelNumber, IncLevelsCount, ind, fragments.Count));
-                }
             }
+
+            if (FragmentFounded != null)
+                FragmentFounded(this, new FragmentEventArgs(incLevelNumber, IncLevelsCount, endInd, fragments.Count));
         }
 
         private Bitmap ReplaceFragments(LevelImage origLevelImage, LevelImage[] decLevelImages, List<FragmentsMapping> mapping)
         {
-            var origImage = origLevelImage.Image;
-            var origLevelFragments = origLevelImage.Fragments;
-            int width = origImage.Width;
-            int height = origImage.Height;
-            double blockIncX = BlockIncRatioX * BlockWidth;
-            double blockIncY = BlockIncRatioY * BlockHeight;
-            int iterCountX = (int)(width / blockIncX);
-            int iterCountY = (int)(height / blockIncY);
-            int fragmentsInLineX = (int)((width - BlockWidth) / blockIncX);
-            int fragmentsInLineY = (int)((height - BlockHeight) / blockIncY);
-            int overlapsCountX = (int)Math.Round(BlockWidth / blockIncX);
-            int overlapsCountY = (int)Math.Round(BlockHeight / blockIncY);
-            double blockWidth2 = BlockWidth * 0.5;
-            double blockHeight2 = BlockHeight * 0.5;
-
-            var result = new Bitmap(width, height);
-            var overlapBlockNumbers = new List<int>(overlapsCountX + overlapsCountY);
-            var distances = new List<double>(overlapsCountX + overlapsCountY);
-
+            int width = origLevelImage.Image.Width;
+            int height = origLevelImage.Image.Height;
             var resultRGB = new byte[width * height * Utils.ColorComponentsCount];
 
-            for (int y = 0; y < height; y++)
+            if (!Parallelization)
             {
-                for (int x = 0; x < width; x++)
+                for (int y = 0; y < height; y++)
                 {
-                    int ix = (int)(x / blockIncX);
-                    int iy = (int)(y / blockIncY);
-
-                    overlapBlockNumbers.Clear();
-                    distances.Clear();
-                    for (int iy1 = 0; iy1 < overlapsCountY; iy1++)
-                    {
-                        int blockNumberY = iy - iy1;
-                        if (blockNumberY >= 0 && blockNumberY < fragmentsInLineY)
-                        {
-                            for (int ix1 = 0; ix1 < overlapsCountX; ix1++)
-                            {
-                                int blockNumberX = ix - ix1;
-                                if (blockNumberX >= 0 && blockNumberX < fragmentsInLineX)
-                                {
-                                    var overlapBlockNumber = blockNumberY * fragmentsInLineX + blockNumberX;
-
-                                    var blockOffset = origLevelImage.Fragments[overlapBlockNumber].Offset;
-                                    var blockCenterX = blockOffset.X * width + blockWidth2;
-                                    var blockCenterY = blockOffset.Y * height + blockHeight2;
-
-                                    double distance;
-                                    if (Math.Abs(x - blockCenterX) > Math.Abs(y - blockCenterY))
-                                        distance = Math.Abs(x - blockCenterX) / blockWidth2;
-                                    else
-                                        distance = Math.Abs(y - blockCenterY) / blockHeight2;
-
-                                    overlapBlockNumbers.Add(overlapBlockNumber);
-                                    if (distance < 0)
-                                        distance = 0;
-                                    else if (distance > 1)
-                                        distance = 1;
-                                    distances.Add(1.0 - distance);
-                                }
-                            }
-                        }
-                    }
-
-                    var invDistVectorLength = distances.Aggregate(0.0, (sum, d) => sum += d);
-                    if (invDistVectorLength == 0.0)
-                    {
-                        invDistVectorLength = 1.0;
-                        for (int i = 0; i < distances.Count; i++)
-                            distances[i] = 1.0 / distances.Count;
-                    }
-                    else
-                        invDistVectorLength = 1.0 / invDistVectorLength;
-
-                    double r = 0, g = 0, b = 0;
-                    if (overlapBlockNumbers.Count != 0)
-                    {
-                        for (int i = 0; i < overlapBlockNumbers.Count; i++)
-                        {
-                            var blockNumber = overlapBlockNumbers[i];
-                            var fragmentMapping = mapping[blockNumber];
-
-                            PointD origImageFragmentOffset, decImageFragmentOffset;
-                            origImageFragmentOffset = origLevelImage.Fragments[fragmentMapping.OrigIndex].Offset;
-
-                            int decReplaceCount = 0;
-                            int origReplaceCount = 0;
-                            if (fragmentMapping.Distance < ReplaceDistance && fragmentMapping.DecIndex < decLevelImages[fragmentMapping.LevelIndex].Fragments.Count)
-                            {
-                                decImageFragmentOffset = decLevelImages[fragmentMapping.LevelIndex].Fragments[fragmentMapping.DecIndex].Offset;
-                                decReplaceCount++;
-                            }
-                            else
-                            {
-                                decImageFragmentOffset = origLevelImage.Fragments[blockNumber].Offset;
-                                origReplaceCount++;
-                            }
-
-                            double dx = x - origImageFragmentOffset.X * origImage.Width;
-                            double dy = y - origImageFragmentOffset.Y * origImage.Height;
-                            int srcX = (int)Math.Round(decImageFragmentOffset.X * origImage.Width + dx);
-                            int srcY = (int)Math.Round(decImageFragmentOffset.Y * origImage.Height + dy);
-
-                            int ind = (srcY * origImage.Width + srcX) * Utils.ColorComponentsCount;
-                            r += origLevelImage.RGB[ind + Utils.RedOffset] * distances[i] * invDistVectorLength;
-                            g += origLevelImage.RGB[ind + Utils.GreenOffset] * distances[i] * invDistVectorLength;
-                            b += origLevelImage.RGB[ind + Utils.BlurOffset] * distances[i] * invDistVectorLength;
-                        }
-                    }
-                    else
-                    {
-                        int ind = (y * width + x) * Utils.ColorComponentsCount;
-                        r = origLevelImage.RGB[ind + Utils.RedOffset];
-                        g = origLevelImage.RGB[ind + Utils.GreenOffset];
-                        b = origLevelImage.RGB[ind + Utils.BlurOffset];
-                    }
-
-                    int resultInd = (y * width + x) * Utils.ColorComponentsCount;
-                    resultRGB[resultInd + Utils.RedOffset] = (byte)Math.Round(r);
-                    resultRGB[resultInd + Utils.GreenOffset] = (byte)Math.Round(g);
-                    resultRGB[resultInd + Utils.BlurOffset] = (byte)Math.Round(b);
-                    resultRGB[resultInd + Utils.AlphaOffset] = 255;
+                    ReplaceFragmentsPart(origLevelImage, decLevelImages, mapping, width, height, y, resultRGB);
                 }
+            }
+            else
+            {
+                Parallel.For(0, height, y => ReplaceFragmentsPart(origLevelImage, decLevelImages, mapping, width, height, y, resultRGB));
             }
 
             var resultImage = Utils.BytesArrayToBitmap(resultRGB, width, height);
@@ -405,19 +298,130 @@ namespace SingleImageSuperResolution
             return resultImage;
         }
 
+        private void ReplaceFragmentsPart(LevelImage origLevelImage, LevelImage[] decLevelImages, List<FragmentsMapping> mapping, int width, int height, int y, byte[] resultRGB)
+        {
+            double blockIncX = BlockIncRatioX * BlockWidth;
+            double blockIncY = BlockIncRatioY * BlockHeight;
+            int fragmentsInLineX = (int)((width - BlockWidth) / blockIncX);
+            int fragmentsInLineY = (int)((height - BlockHeight) / blockIncY);
+            int overlapsCountX = (int)Math.Round(BlockWidth / blockIncX);
+            int overlapsCountY = (int)Math.Round(BlockHeight / blockIncY);
+            double blockWidth2 = BlockWidth * 0.5;
+            double blockHeight2 = BlockHeight * 0.5;
+
+            for (int x = 0; x < width; x++)
+            {
+                int ix = (int)(x / blockIncX);
+                int iy = (int)(y / blockIncY);
+
+                var overlapBlockNumbers = new List<int>(overlapsCountX + overlapsCountY);
+                var distances = new List<double>(overlapsCountX + overlapsCountY);
+                for (int iy1 = 0; iy1 < overlapsCountY; iy1++)
+                {
+                    int blockNumberY = iy - iy1;
+                    if (blockNumberY >= 0 && blockNumberY < fragmentsInLineY)
+                    {
+                        for (int ix1 = 0; ix1 < overlapsCountX; ix1++)
+                        {
+                            int blockNumberX = ix - ix1;
+                            if (blockNumberX >= 0 && blockNumberX < fragmentsInLineX)
+                            {
+                                var overlapBlockNumber = blockNumberY * fragmentsInLineX + blockNumberX;
+
+                                var blockOffset = origLevelImage.Fragments[overlapBlockNumber].Offset;
+                                var blockCenterX = blockOffset.X * width + blockWidth2;
+                                var blockCenterY = blockOffset.Y * height + blockHeight2;
+
+                                double distance;
+                                if (Math.Abs(x - blockCenterX) > Math.Abs(y - blockCenterY))
+                                    distance = Math.Abs(x - blockCenterX) / blockWidth2;
+                                else
+                                    distance = Math.Abs(y - blockCenterY) / blockHeight2;
+
+                                overlapBlockNumbers.Add(overlapBlockNumber);
+                                if (distance < 0)
+                                    distance = 0;
+                                else if (distance > 1)
+                                    distance = 1;
+                                distances.Add(1.0 - distance);
+                            }
+                        }
+                    }
+                }
+
+                var invDistVectorLength = distances.Aggregate(0.0, (sum, d) => sum += d);
+                if (invDistVectorLength == 0.0)
+                {
+                    invDistVectorLength = 1.0;
+                    for (int i = 0; i < distances.Count; i++)
+                        distances[i] = 1.0 / distances.Count;
+                }
+                else
+                    invDistVectorLength = 1.0 / invDistVectorLength;
+
+                double r = 0, g = 0, b = 0;
+                if (overlapBlockNumbers.Count != 0)
+                {
+                    for (int i = 0; i < overlapBlockNumbers.Count; i++)
+                    {
+                        var blockNumber = overlapBlockNumbers[i];
+                        var fragmentMapping = mapping[blockNumber];
+
+                        PointD origImageFragmentOffset, decImageFragmentOffset;
+                        origImageFragmentOffset = origLevelImage.Fragments[fragmentMapping.OrigIndex].Offset;
+
+                        int decReplaceCount = 0;
+                        int origReplaceCount = 0;
+                        if (fragmentMapping.Distance < ReplaceDistance && fragmentMapping.DecIndex < decLevelImages[fragmentMapping.LevelIndex].Fragments.Count)
+                        {
+                            decImageFragmentOffset = decLevelImages[fragmentMapping.LevelIndex].Fragments[fragmentMapping.DecIndex].Offset;
+                            decReplaceCount++;
+                        }
+                        else
+                        {
+                            decImageFragmentOffset = origLevelImage.Fragments[blockNumber].Offset;
+                            origReplaceCount++;
+                        }
+
+                        double dx = x - origImageFragmentOffset.X * width;
+                        double dy = y - origImageFragmentOffset.Y * height;
+                        int srcX = (int)Math.Round(decImageFragmentOffset.X * width + dx);
+                        int srcY = (int)Math.Round(decImageFragmentOffset.Y * height + dy);
+
+                        int ind = (srcY * width + srcX) * Utils.ColorComponentsCount;
+                        r += origLevelImage.RGB[ind + Utils.RedOffset] * distances[i] * invDistVectorLength;
+                        g += origLevelImage.RGB[ind + Utils.GreenOffset] * distances[i] * invDistVectorLength;
+                        b += origLevelImage.RGB[ind + Utils.BlurOffset] * distances[i] * invDistVectorLength;
+                    }
+                }
+                else
+                {
+                    int ind = (y * width + x) * Utils.ColorComponentsCount;
+                    r = origLevelImage.RGB[ind + Utils.RedOffset];
+                    g = origLevelImage.RGB[ind + Utils.GreenOffset];
+                    b = origLevelImage.RGB[ind + Utils.BlurOffset];
+                }
+
+                int resultInd = (y * width + x) * Utils.ColorComponentsCount;
+                resultRGB[resultInd + Utils.RedOffset] = (byte)Math.Round(r);
+                resultRGB[resultInd + Utils.GreenOffset] = (byte)Math.Round(g);
+                resultRGB[resultInd + Utils.BlurOffset] = (byte)Math.Round(b);
+                resultRGB[resultInd + Utils.AlphaOffset] = 255;
+            }
+        }
+
         private static double[] LevelFragmentPointsToArray(LevelImage[] levelImages, out int[] fragmentLevelsIndexes)
         {
             fragmentLevelsIndexes = new int[levelImages.Length];
             List<double> result = new List<double>(levelImages.Aggregate(0, (i, levelImage) => i += levelImage.Fragments.Count));
             int ind = 0;
+            int count = levelImages[0].Fragments[0].Size;
             for (int i = 0; i < levelImages.Length; i++)
             {
                 fragmentLevelsIndexes[i] = ind;
                 var yComps = levelImages[i].FragmentYCompsToDoubleArray();
-                if (yComps.Length == 0)
-                    continue;
                 result.AddRange(yComps);
-                ind += yComps.Length / (levelImages[i].Fragments[0].YComponents.Length);
+                ind += yComps.Length / count;
             }
             return result.ToArray();
         }

@@ -851,6 +851,8 @@ extern "C" {
 
 	  DLL_API void annkFRSearch(ANNpoint q, ANNdist sqRad, int k, ANNidxArray nnIdx, ANNdistArray dd, double eps = 0.0);
 
+	  DLL_API void annKdQuerySearch(double *query, int n, int dim, ANNidxArray nnIdx, ANNdistArray dd, double eps = 0.0);
+
 	  DLL_API void annFree();
 }
 
